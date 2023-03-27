@@ -10,6 +10,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <bluetooth/services/nus.h>
+#include <dk_buttons_and_leds.h>
 
 LOG_MODULE_REGISTER(APP);
 
@@ -32,6 +33,14 @@ static void bluetooth_disconnected(struct bt_conn* conn, uint8_t reason) {
 
 static void nus_received(struct bt_conn* conn, const uint8_t* const data, uint16_t len) {
 	LOG_INF("Bluetooth LE NUS received data: %s", data);
+
+	if ((strncmp(data, "ON", len) == 0) && (len == strlen("ON"))) {
+		dk_set_led(DK_LED2, true);
+	} else if ((strncmp(data, "OFF", len) == 0) && (len == strlen("OFF"))) {
+		dk_set_led(DK_LED2, false);
+	} else {
+		LOG_ERR("Received unsupported NUS command!");
+	}
 }
 
 static struct bt_conn_cb bluetooth_callbacks = {
@@ -62,6 +71,14 @@ void main(void)
 	LOG_INF("Hello World!");
 
 	int err = 0;
+
+	err = dk_leds_init();
+	if (err) {
+		LOG_ERR("LEDs initialization failed!");
+	} else {
+		LOG_INF("LEDs initialization succeeded");
+	}
+
 	err = bt_enable(bluetooth_init);
 	if (err) {
 		LOG_ERR("Bluetooth LE initialization failed!");
