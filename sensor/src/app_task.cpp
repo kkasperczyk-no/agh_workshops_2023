@@ -11,6 +11,7 @@
 #include <platform/CHIPDeviceLayer.h>
 
 #include "board_util.h"
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app/server/OnboardingCodesUtil.h>
 #include <app/server/Server.h>
 #include <credentials/DeviceAttestationCredsProvider.h>
@@ -109,7 +110,10 @@ void AppTask::SensorMeasureHandler(const AppEvent &)
 		return;
 	}
 
-	LOG_INF("Measured data: val1 %d val2 %d", data.val1, data.val2);
+	int16_t new_data = static_cast<int16_t>(data.val1 * 100 + data.val2 / 10000);
+	LOG_INF("Measured temperature: %d.%d*C", data.val1, data.val2);
+
+	Clusters::TemperatureMeasurement::Attributes::MeasuredValue::Set(1, new_data);
 }
 
 void AppTask::SensorTimerHandler(k_timer *timer)
