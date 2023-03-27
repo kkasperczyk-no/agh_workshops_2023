@@ -29,6 +29,8 @@
 #endif
 
 #include <dk_buttons_and_leds.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -86,9 +88,28 @@ app::Clusters::NetworkCommissioning::Instance
 static k_timer sSensorTimer;
 static constexpr uint32_t kSensorTimerPeriodMs = 1000;
 
+const struct device *sSensorDevice = DEVICE_DT_GET_ONE(nordic_nrf_temp);
+
 void AppTask::SensorMeasureHandler(const AppEvent &)
 {
 	LOG_INF("SensorMeasure event");
+
+	int err = sensor_sample_fetch(sSensorDevice);
+
+	if (err) {
+		LOG_ERR("Fetching sensor data failed!");
+		return;
+	}
+
+	struct sensor_value data;
+
+	err = sensor_channel_get(sSensorDevice, SENSOR_CHAN_DIE_TEMP, &data);
+	if (err) {
+		LOG_ERR("Getting sensor data failed!");
+		return;
+	}
+
+	LOG_INF("Measured data: val1 %d val2 %d", data.val1, data.val2);
 }
 
 void AppTask::SensorTimerHandler(k_timer *timer)
@@ -183,6 +204,11 @@ CHIP_ERROR AppTask::Init()
 	 * between the main and the CHIP threads.
 	 */
 	PlatformMgr().AddEventHandler(ChipEventHandler, 0);
+
+	if (!device_is_ready(sSensorDevice)) {
+		LOG_ERR("Sensor device is not ready!");
+		return chip::System::MapErrorZephyr(-1);
+	}
 
 	k_timer_init(&sSensorTimer, &SensorTimerHandler, nullptr);
 	k_timer_start(&sSensorTimer, K_MSEC(kSensorTimerPeriodMs), K_MSEC(kSensorTimerPeriodMs));
