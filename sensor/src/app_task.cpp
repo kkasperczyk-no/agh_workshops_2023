@@ -29,8 +29,8 @@
 #endif
 
 #include <dk_buttons_and_leds.h>
-#include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 
@@ -82,6 +82,22 @@ namespace StatusLed
 app::Clusters::NetworkCommissioning::Instance
 	sWiFiCommissioningInstance(0, &(NetworkCommissioning::NrfWiFiDriver::Instance()));
 #endif
+
+static k_timer sSensorTimer;
+static constexpr uint32_t kSensorTimerPeriodMs = 1000;
+
+void AppTask::SensorMeasureHandler(const AppEvent &)
+{
+	LOG_INF("SensorMeasure event");
+}
+
+void AppTask::SensorTimerHandler(k_timer *timer)
+{
+	AppEvent event;
+	event.Type = AppEventType::SensorMeasure;
+	event.Handler = AppTask::SensorMeasureHandler;
+	AppTask::Instance().PostEvent(event);
+}
 
 CHIP_ERROR AppTask::Init()
 {
@@ -167,6 +183,9 @@ CHIP_ERROR AppTask::Init()
 	 * between the main and the CHIP threads.
 	 */
 	PlatformMgr().AddEventHandler(ChipEventHandler, 0);
+
+	k_timer_init(&sSensorTimer, &SensorTimerHandler, nullptr);
+	k_timer_start(&sSensorTimer, K_MSEC(kSensorTimerPeriodMs), K_MSEC(kSensorTimerPeriodMs));
 
 	err = PlatformMgr().StartEventLoopTask();
 	if (err != CHIP_NO_ERROR) {

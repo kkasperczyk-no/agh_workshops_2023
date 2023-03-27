@@ -45,6 +45,8 @@ private:
 	static void LEDStateUpdateHandler(LEDWidget &ledWidget);
 	static void FunctionTimerTimeoutCallback(k_timer *timer);
 	static void UpdateStatusLED();
+	static void SensorTimerHandler(k_timer *timer);
+	static void SensorMeasureHandler(const AppEvent &);
 
 	FunctionEvent mFunction = FunctionEvent::NoneSelected;
 	bool mFunctionTimerActive = false;
